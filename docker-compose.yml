@@ -1,0 +1,178 @@
+services:
+  mysql-usuario:
+    image: mysql:8.4
+    container_name: mysql-usuario
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: usuario_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_usuario_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - microservices-net
+
+  mysql-proyecto:
+    image: mysql:8.4
+    container_name: mysql-proyecto
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: proyecto_db
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_proyecto_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - microservices-net
+
+  mysql-tarea:
+    image: mysql:8.4
+    container_name: mysql-tarea
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: tarea_db
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql_tarea_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - microservices-net
+
+  config-server:
+    build:
+      context: ./config-server/config-server
+    container_name: config-server
+    environment:
+      SPRING_CLOUD_CONFIG_SERVER_GIT_URI: file:///config-repo
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./config-repo:/config-repo:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8888'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - microservices-net
+
+  eureka-server:
+    build:
+      context: ./eureka-server/eureka-server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8761'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - microservices-net
+
+  api-gateway:
+    build:
+      context: ./api-gateway/api-gateway
+    container_name: api-gateway
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - microservices-net
+
+  usuario-service:
+    build:
+      context: ./usuario-service/usuario-service
+    container_name: usuario-service
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-usuario:3306/usuario_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      mysql-usuario:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    networks:
+      - microservices-net
+
+  proyecto-service:
+    build:
+      context: ./proyecto-service/proyecto-service
+    container_name: proyecto-service
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-proyecto:3306/proyecto_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      mysql-proyecto:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+    networks:
+      - microservices-net
+
+  tarea-service:
+    build:
+      context: ./tarea-service/tarea-service
+    container_name: tarea-service
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-tarea:3306/tarea_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      mysql-tarea:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    networks:
+      - microservices-net
+
+networks:
+  microservices-net:
+    driver: bridge
+
+volumes:
+  mysql_usuario_data:
+  mysql_proyecto_data:
+  mysql_tarea_data:

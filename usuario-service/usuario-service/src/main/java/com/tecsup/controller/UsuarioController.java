@@ -26,4 +26,9 @@ public class UsuarioController {
     public List<Usuario> listar() {
         return service.listar();
     }
+
+    @GetMapping("/{id}")
+    public Usuario obtener(@PathVariable Long id) {
+        return service.obtener(id);
+    }
 }

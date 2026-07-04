@@ -27,6 +27,11 @@ public class TareaController {
         return service.obtener(id);
     }
 
+    @GetMapping("/{id}/detalle")
+    public Object obtenerDetalle(@PathVariable Long id) {
+        return service.obtenerDetalle(id);
+    }
+
     @PostMapping
     public Tarea guardar(@Valid @RequestBody Tarea tarea) {
         return service.guardar(tarea);
