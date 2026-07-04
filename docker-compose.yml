@@ -58,7 +58,8 @@ services:
       context: ./config-server/config-server
     container_name: config-server
     environment:
-      SPRING_CLOUD_CONFIG_SERVER_GIT_URI: file:///config-repo
+      SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/config-repo
     ports:
       - "8888:8888"
     volumes:
